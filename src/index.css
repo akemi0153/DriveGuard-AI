@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@layer base {
+  .light-theme {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;

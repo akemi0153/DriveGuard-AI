@@ -6,12 +6,13 @@ import AlertsPanel from './components/AlertsPanel';
 import SettingsPanel from './components/SettingsPanel';
 import AgentScript from './components/AgentScript';
 import FileInspector from './components/FileInspector';
-import { HardDrive, Activity, AlertTriangle, Settings as SettingsIcon, TerminalSquare, FolderSearch } from 'lucide-react';
+import { HardDrive, Activity, AlertTriangle, Settings as SettingsIcon, TerminalSquare, FolderSearch, Sun, Moon } from 'lucide-react';
 
 type Tab = 'dashboard' | 'disks' | 'alerts' | 'inspector' | 'settings' | 'agent';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [disks, setDisks] = useState<DiskSpace[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [settings, setSettings] = useState<Settings>({ alertThreshold: 90, alertEmail: '', driveThresholds: {}, pollingEnabled: true });
@@ -58,7 +59,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0c111d] flex flex-col font-sans text-white relative overflow-x-hidden">
+    <div className={`min-h-screen bg-[#0c111d] flex flex-col font-sans text-white relative overflow-x-hidden ${theme === 'light' ? 'light-theme' : ''}`}>
       {/* Background Mesh Orbs */}
       <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none"></div>
@@ -73,6 +74,14 @@ export default function App() {
               </div>
               <h1 className="text-xl font-bold tracking-tight text-white">DriveGuard <span className="text-blue-400">AI</span></h1>
             </div>
+            
+            <button
+               onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+               className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+               title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
           </div>
           
           {/* Navigation */}
