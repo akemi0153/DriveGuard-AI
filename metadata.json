@@ -1,0 +1,6 @@
+{
+  "name": "Windows Drive Monitor",
+  "description": "Proactive storage management with real-time analytics, auto file validation, email alerts for capacity thresholds, and CSV export capabilities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
