@@ -8,9 +8,10 @@ interface Props {
   disks: DiskSpace[];
   settings: Settings;
   onUpdateSettings: (settings: Settings) => void;
+  onRefresh: () => void;
 }
 
-export default function DisksList({ disks, settings, onUpdateSettings }: Props) {
+export default function DisksList({ disks, settings, onUpdateSettings, onRefresh }: Props) {
   const [downloadError, setDownloadError] = useState('');
   const [addDriveError, setAddDriveError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -50,6 +51,7 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
       });
       setShowAddModal(false);
       setManualDrive({ machineId: '', driveLetter: 'C:', totalSpaceGB: 500, usedSpaceGB: 100 });
+      onRefresh();
     } catch (err) {
       console.error(err);
     }
