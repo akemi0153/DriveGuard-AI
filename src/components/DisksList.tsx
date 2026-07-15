@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DiskSpace, Settings } from '../types';
 import { formatBytes } from '../lib/utils';
-import { Download, AlertCircle, Activity, Plus, X } from 'lucide-react';
+import { Download, AlertCircle, Activity, Plus, X, FolderSearch } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Props {
@@ -14,6 +14,13 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
   const [downloadError, setDownloadError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [addMode, setAddMode] = useState<'discovered' | 'manual'>('discovered');
+  const [manualDrive, setManualDrive] = useState({
+    machineId: '',
+    driveLetter: 'C:',
+    totalSpaceGB: 500,
+    usedSpaceGB: 100
+  });
 
   const mockDiscoveredDrives = [
     { machineId: 'SRV-DB-01', driveLetter: 'F:', totalSpaceGB: 1024, usedSpaceGB: 450 },
@@ -27,7 +34,7 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
   const handleAddDrive = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAdding(true);
-    const drive = mockDiscoveredDrives[selectedDriveIndex];
+    const drive = addMode === 'discovered' ? mockDiscoveredDrives[selectedDriveIndex] : manualDrive;
     try {
       await fetch('/api/telemetry', {
         method: 'POST',
@@ -41,10 +48,53 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
         })
       });
       setShowAddModal(false);
+      setManualDrive({ machineId: '', driveLetter: 'C:', totalSpaceGB: 500, usedSpaceGB: 100 });
     } catch (err) {
       console.error(err);
     }
     setIsAdding(false);
+  };
+
+  const handleSelectLocalFolder = async () => {
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' });
+      
+      let totalBytes = 0;
+      let fileCount = 0;
+      const maxFiles = 1000;
+      
+      async function getDirSize(handle: any) {
+        if (fileCount > maxFiles) return;
+        for await (const entry of handle.values()) {
+          if (fileCount > maxFiles) break;
+          if (entry.kind === 'file') {
+            try {
+               const file = await entry.getFile();
+               totalBytes += file.size;
+               fileCount++;
+            } catch(e){}
+          } else if (entry.kind === 'directory') {
+            await getDirSize(entry);
+          }
+        }
+      }
+      
+      await getDirSize(dirHandle);
+      
+      const usedGB = Math.max(1, Math.ceil(totalBytes / (1024 * 1024 * 1024)));
+      const letter = dirHandle.name.substring(0, 1).toUpperCase();
+      const driveLetter = /^[A-Z]$/.test(letter) ? letter + ':' : 'C:';
+      
+      setManualDrive({
+        machineId: 'LOCAL-PC',
+        driveLetter: driveLetter,
+        usedSpaceGB: usedGB,
+        totalSpaceGB: Math.max(500, usedGB * 2)
+      });
+      
+    } catch (err) {
+      console.error('Folder selection cancelled or failed', err);
+    }
   };
 
   const handleExportCSV = () => {
@@ -226,34 +276,114 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
             </div>
             
             <form onSubmit={handleAddDrive} className="p-6">
+              <div className="flex bg-white/5 rounded-lg p-1 mb-6 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setAddMode('discovered')}
+                  className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${addMode === 'discovered' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Discovered Drives
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddMode('manual')}
+                  className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${addMode === 'manual' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Manual Entry
+                </button>
+              </div>
+
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Discovered Unmonitored Drives</label>
-                  <div className="space-y-3">
-                    {mockDiscoveredDrives.map((drive, idx) => (
-                      <label 
-                        key={idx}
-                        className={`flex p-4 rounded-xl border cursor-pointer transition-colors ${selectedDriveIndex === idx ? 'bg-blue-500/10 border-blue-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
-                      >
-                        <input 
-                          type="radio" 
-                          name="drive"
-                          className="hidden" 
-                          checked={selectedDriveIndex === idx} 
-                          onChange={() => setSelectedDriveIndex(idx)} 
-                        />
-                        <div className="flex-1">
-                           <div className={`font-medium ${selectedDriveIndex === idx ? 'text-white' : 'text-slate-300'}`}>
-                             {drive.machineId} (Drive {drive.driveLetter})
-                           </div>
-                           <div className="text-xs text-slate-500 mt-1">
-                             {drive.totalSpaceGB} GB Total • {drive.usedSpaceGB} GB Used
-                           </div>
-                        </div>
-                      </label>
-                    ))}
+                {addMode === 'discovered' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Select a Drive</label>
+                    <div className="space-y-3">
+                      {mockDiscoveredDrives.map((drive, idx) => (
+                        <label 
+                          key={idx}
+                          className={`flex p-4 rounded-xl border cursor-pointer transition-colors ${selectedDriveIndex === idx ? 'bg-blue-500/10 border-blue-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                        >
+                          <input 
+                            type="radio" 
+                            name="drive"
+                            className="hidden" 
+                            checked={selectedDriveIndex === idx} 
+                            onChange={() => setSelectedDriveIndex(idx)} 
+                          />
+                          <div className="flex-1">
+                             <div className={`font-medium ${selectedDriveIndex === idx ? 'text-white' : 'text-slate-300'}`}>
+                               {drive.machineId} (Drive {drive.driveLetter})
+                             </div>
+                             <div className="text-xs text-slate-500 mt-1">
+                               {drive.totalSpaceGB} GB Total • {drive.usedSpaceGB} GB Used
+                             </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex justify-end mb-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectLocalFolder}
+                        className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1.5 rounded-md transition-colors"
+                      >
+                        <FolderSearch className="w-4 h-4" />
+                        Select Folder from Windows
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Machine ID</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={manualDrive.machineId}
+                        onChange={e => setManualDrive({...manualDrive, machineId: e.target.value})}
+                        placeholder="e.g. SRV-DB-01"
+                        className="w-full bg-[#0c111d] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Drive Letter</label>
+                      <select 
+                        value={manualDrive.driveLetter}
+                        onChange={e => setManualDrive({...manualDrive, driveLetter: e.target.value})}
+                        className="w-full bg-[#0c111d] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      >
+                        {'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
+                          <option key={letter} value={`${letter}:`}>{letter}:</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Total Space (GB)</label>
+                        <input 
+                          type="number" 
+                          required
+                          min="1"
+                          value={manualDrive.totalSpaceGB}
+                          onChange={e => setManualDrive({...manualDrive, totalSpaceGB: parseInt(e.target.value) || 0})}
+                          className="w-full bg-[#0c111d] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Used Space (GB)</label>
+                        <input 
+                          type="number" 
+                          required
+                          min="0"
+                          max={manualDrive.totalSpaceGB}
+                          value={manualDrive.usedSpaceGB}
+                          onChange={e => setManualDrive({...manualDrive, usedSpaceGB: parseInt(e.target.value) || 0})}
+                          className="w-full bg-[#0c111d] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mt-6 flex justify-end gap-3 pt-6 border-t border-white/10">
