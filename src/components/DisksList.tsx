@@ -13,33 +13,34 @@ interface Props {
 export default function DisksList({ disks, settings, onUpdateSettings }: Props) {
   const [downloadError, setDownloadError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newDrive, setNewDrive] = useState({
-    machineId: '',
-    driveLetter: 'E:',
-    totalSpaceGB: 500,
-    usedSpaceGB: 100
-  });
   const [isAdding, setIsAdding] = useState(false);
+
+  const mockDiscoveredDrives = [
+    { machineId: 'SRV-DB-01', driveLetter: 'F:', totalSpaceGB: 1024, usedSpaceGB: 450 },
+    { machineId: 'SRV-WEB-02', driveLetter: 'D:', totalSpaceGB: 512, usedSpaceGB: 480 },
+    { machineId: 'SRV-NAS-01', driveLetter: 'Z:', totalSpaceGB: 8192, usedSpaceGB: 6000 },
+    { machineId: 'DEV-WS-05', driveLetter: 'E:', totalSpaceGB: 2048, usedSpaceGB: 100 },
+  ];
+
+  const [selectedDriveIndex, setSelectedDriveIndex] = useState(0);
 
   const handleAddDrive = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAdding(true);
+    const drive = mockDiscoveredDrives[selectedDriveIndex];
     try {
       await fetch('/api/telemetry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          machineId: newDrive.machineId,
-          driveLetter: newDrive.driveLetter,
-          totalSpace: newDrive.totalSpaceGB * 1024 * 1024 * 1024,
-          usedSpace: newDrive.usedSpaceGB * 1024 * 1024 * 1024,
+          machineId: drive.machineId,
+          driveLetter: drive.driveLetter,
+          totalSpace: drive.totalSpaceGB * 1024 * 1024 * 1024,
+          usedSpace: drive.usedSpaceGB * 1024 * 1024 * 1024,
           directories: []
         })
       });
       setShowAddModal(false);
-      // Wait for next poll or trigger a fetch. The app will fetch in <10s.
-      // But we can also clear the form.
-      setNewDrive({ machineId: '', driveLetter: 'E:', totalSpaceGB: 500, usedSpaceGB: 100 });
     } catch (err) {
       console.error(err);
     }
@@ -227,50 +228,31 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
             <form onSubmit={handleAddDrive} className="p-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Machine ID</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={newDrive.machineId}
-                    onChange={e => setNewDrive({...newDrive, machineId: e.target.value})}
-                    placeholder="e.g. SRV-DB-01"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Drive Letter</label>
-                  <select 
-                    value={newDrive.driveLetter}
-                    onChange={e => setNewDrive({...newDrive, driveLetter: e.target.value})}
-                    className="w-full bg-[#0c111d] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  >
-                    {'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
-                      <option key={letter} value={`${letter}:`}>{letter}:</option>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Discovered Unmonitored Drives</label>
+                  <div className="space-y-3">
+                    {mockDiscoveredDrives.map((drive, idx) => (
+                      <label 
+                        key={idx}
+                        className={`flex p-4 rounded-xl border cursor-pointer transition-colors ${selectedDriveIndex === idx ? 'bg-blue-500/10 border-blue-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                      >
+                        <input 
+                          type="radio" 
+                          name="drive"
+                          className="hidden" 
+                          checked={selectedDriveIndex === idx} 
+                          onChange={() => setSelectedDriveIndex(idx)} 
+                        />
+                        <div className="flex-1">
+                           <div className={`font-medium ${selectedDriveIndex === idx ? 'text-white' : 'text-slate-300'}`}>
+                             {drive.machineId} (Drive {drive.driveLetter})
+                           </div>
+                           <div className="text-xs text-slate-500 mt-1">
+                             {drive.totalSpaceGB} GB Total • {drive.usedSpaceGB} GB Used
+                           </div>
+                        </div>
+                      </label>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Total Space (GB)</label>
-                  <input 
-                    type="number" 
-                    required
-                    min="1"
-                    value={newDrive.totalSpaceGB}
-                    onChange={e => setNewDrive({...newDrive, totalSpaceGB: parseInt(e.target.value) || 0})}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Used Space (GB)</label>
-                  <input 
-                    type="number" 
-                    required
-                    min="0"
-                    max={newDrive.totalSpaceGB}
-                    value={newDrive.usedSpaceGB}
-                    onChange={e => setNewDrive({...newDrive, usedSpaceGB: parseInt(e.target.value) || 0})}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
+                  </div>
                 </div>
               </div>
 
