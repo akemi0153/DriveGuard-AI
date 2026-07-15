@@ -81,8 +81,9 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl shadow-none focus:outline-none overflow-hidden relative z-10">
-      <div className="p-6 border-b border-white/10 flex justify-between items-center bg-transparent">
+    <>
+      <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl shadow-none focus:outline-none overflow-hidden relative z-10">
+        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-transparent">
          <h3 className="text-xl font-semibold text-white">Monitored Drives</h3>
          <div className="flex items-center gap-3">
            {downloadError && (
@@ -205,9 +206,10 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
           </tbody>
         </table>
       </div>
+      </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl flex flex-col">
             <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">
               <h3 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -298,6 +300,6 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
