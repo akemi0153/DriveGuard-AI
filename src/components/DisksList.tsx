@@ -12,6 +12,7 @@ interface Props {
 
 export default function DisksList({ disks, settings, onUpdateSettings }: Props) {
   const [downloadError, setDownloadError] = useState('');
+  const [addDriveError, setAddDriveError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [addMode, setAddMode] = useState<'discovered' | 'manual'>('discovered');
@@ -56,6 +57,12 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
   };
 
   const handleSelectLocalFolder = async () => {
+    if (window.self !== window.top) {
+      setAddDriveError("Folder selection is restricted in this preview. Please click 'Open in New Tab' (top right icon) to use this feature.");
+      setTimeout(() => setAddDriveError(''), 10000);
+      return;
+    }
+
     try {
       const dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' });
       
@@ -276,6 +283,11 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
             </div>
             
             <form onSubmit={handleAddDrive} className="p-6">
+              {addDriveError && (
+                 <div className="text-xs text-red-400 bg-red-500/10 px-3 py-2 mb-4 rounded border border-red-500/20 shadow-sm text-center">
+                   {addDriveError}
+                 </div>
+              )}
               <div className="flex bg-white/5 rounded-lg p-1 mb-6 border border-white/10">
                 <button
                   type="button"
