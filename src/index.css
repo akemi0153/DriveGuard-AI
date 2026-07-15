@@ -4,6 +4,14 @@
   .light-theme {
     filter: invert(1) hue-rotate(180deg);
   }
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  img {
+    pointer-events: none;
+  }
 }
 
 @layer utilities {

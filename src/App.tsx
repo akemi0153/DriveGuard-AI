@@ -6,9 +6,10 @@ import AlertsPanel from './components/AlertsPanel';
 import SettingsPanel from './components/SettingsPanel';
 import AgentScript from './components/AgentScript';
 import FileInspector from './components/FileInspector';
-import { HardDrive, Activity, AlertTriangle, Settings as SettingsIcon, TerminalSquare, FolderSearch, Sun, Moon } from 'lucide-react';
+import ReportsPanel from './components/ReportsPanel';
+import { HardDrive, Activity, AlertTriangle, Settings as SettingsIcon, TerminalSquare, FolderSearch, Sun, Moon, FileText } from 'lucide-react';
 
-type Tab = 'dashboard' | 'disks' | 'alerts' | 'inspector' | 'settings' | 'agent';
+type Tab = 'dashboard' | 'disks' | 'alerts' | 'inspector' | 'reports' | 'settings' | 'agent';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -37,6 +38,38 @@ export default function App() {
 
   useEffect(() => {
     fetchData();
+
+    // Source Protection
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent F12
+      if (e.key === 'F12') {
+        e.preventDefault();
+      }
+      // Prevent Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+      if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+        e.preventDefault();
+      }
+      // Prevent Ctrl+U
+      if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+        e.preventDefault();
+      }
+      // Prevent Ctrl+S, Ctrl+P
+      if (e.ctrlKey && (e.key === 'S' || e.key === 's' || e.key === 'P' || e.key === 'p')) {
+         e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -54,6 +87,7 @@ export default function App() {
     { id: 'disks', label: 'Drives', icon: HardDrive },
     { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
     { id: 'inspector', label: 'File Inspector', icon: FolderSearch },
+    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'settings', label: 'Configuration', icon: SettingsIcon },
     { id: 'agent', label: 'Deploy Agent', icon: TerminalSquare },
   ];
@@ -117,6 +151,7 @@ export default function App() {
          {activeTab === 'disks' && <DisksList disks={disks} settings={settings} onUpdateSettings={setSettings} />}
          {activeTab === 'alerts' && <AlertsPanel alerts={alerts} />}
          {activeTab === 'inspector' && <FileInspector />}
+         {activeTab === 'reports' && <ReportsPanel disks={disks} />}
          {activeTab === 'settings' && <SettingsPanel settings={settings} onUpdate={setSettings} disks={disks} />}
          {activeTab === 'agent' && <AgentScript />}
       </main>

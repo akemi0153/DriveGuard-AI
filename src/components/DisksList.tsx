@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DiskSpace, Settings } from '../types';
 import { formatBytes } from '../lib/utils';
-import { Download, AlertCircle, Activity } from 'lucide-react';
+import { Download, AlertCircle, Activity, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Props {
@@ -12,6 +12,39 @@ interface Props {
 
 export default function DisksList({ disks, settings, onUpdateSettings }: Props) {
   const [downloadError, setDownloadError] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newDrive, setNewDrive] = useState({
+    machineId: '',
+    driveLetter: 'E:',
+    totalSpaceGB: 500,
+    usedSpaceGB: 100
+  });
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddDrive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAdding(true);
+    try {
+      await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          machineId: newDrive.machineId,
+          driveLetter: newDrive.driveLetter,
+          totalSpace: newDrive.totalSpaceGB * 1024 * 1024 * 1024,
+          usedSpace: newDrive.usedSpaceGB * 1024 * 1024 * 1024,
+          directories: []
+        })
+      });
+      setShowAddModal(false);
+      // Wait for next poll or trigger a fetch. The app will fetch in <10s.
+      // But we can also clear the form.
+      setNewDrive({ machineId: '', driveLetter: 'E:', totalSpaceGB: 500, usedSpaceGB: 100 });
+    } catch (err) {
+      console.error(err);
+    }
+    setIsAdding(false);
+  };
 
   const handleExportCSV = () => {
     if (disks.length === 0) return;
@@ -63,6 +96,13 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
            >
               <Download className="w-4 h-4" />
               Export CSV
+           </button>
+           <button 
+             onClick={() => setShowAddModal(true)}
+             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20"
+           >
+              <Plus className="w-4 h-4" />
+              Add Drive
            </button>
          </div>
       </div>
@@ -165,6 +205,99 @@ export default function DisksList({ disks, settings, onUpdateSettings }: Props) 
           </tbody>
         </table>
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl flex flex-col">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center shrink-0">
+              <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-400" />
+                Add Drive
+              </h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddDrive} className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Machine ID</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={newDrive.machineId}
+                    onChange={e => setNewDrive({...newDrive, machineId: e.target.value})}
+                    placeholder="e.g. SRV-DB-01"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Drive Letter</label>
+                  <select 
+                    value={newDrive.driveLetter}
+                    onChange={e => setNewDrive({...newDrive, driveLetter: e.target.value})}
+                    className="w-full bg-[#0c111d] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  >
+                    {'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => (
+                      <option key={letter} value={`${letter}:`}>{letter}:</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Total Space (GB)</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="1"
+                    value={newDrive.totalSpaceGB}
+                    onChange={e => setNewDrive({...newDrive, totalSpaceGB: parseInt(e.target.value) || 0})}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Used Space (GB)</label>
+                  <input 
+                    type="number" 
+                    required
+                    min="0"
+                    max={newDrive.totalSpaceGB}
+                    value={newDrive.usedSpaceGB}
+                    onChange={e => setNewDrive({...newDrive, usedSpaceGB: parseInt(e.target.value) || 0})}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3 pt-6 border-t border-white/10">
+                <button 
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                  disabled={isAdding}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isAdding}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isAdding ? (
+                    <>
+                      <Activity className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : 'Add Drive'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
